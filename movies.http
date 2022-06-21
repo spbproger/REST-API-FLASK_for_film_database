@@ -2,6 +2,7 @@ POST http://localhost:5000/movies/
 Content-Type: application/json
 
 {
+  "id": 28,
   "title": "title",
   "description": "description",
   "trailer": "trailer",
@@ -28,17 +29,17 @@ Accept: application/json
 Content-Type: application/json
 
 {
-  "title": "GOVNO",
-  "description": "description",
+  "title": "GOVerNOr",
+  "description": "description2",
   "trailer": "trailer",
-  "year": 1222,
+  "year": 2222,
   "rating": 1,
-  "genre_id": 1,
-  "director_id": 1
+  "genre_id": 4,
+  "director_id": 5
 }
 ###
 
-DELETE http://localhost:5000/movies/1
+DELETE http://localhost:5000/movies/28
 Accept: application/json
 
 ###
@@ -48,7 +49,7 @@ Accept: application/json
 Content-Type: application/json
 
 {
-  "title": "STRASHNO"
+  "title": "DA"
 }
 
 ###

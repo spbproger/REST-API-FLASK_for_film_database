@@ -8,6 +8,9 @@ from models_db import *
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JSON_AS_ASCII'] = False
+app.config['RESTX_JSON'] = {"ensure_ascii": False, "indent": 3}
+
 db = SQLAlchemy(app)
 
 api = Api(app)
@@ -18,11 +21,17 @@ movie_ns = api.namespace('movies')
 class MovieView(Resource):
 
     def get(self):
-        movies_all = db.session.query(Movie.id, Movie.title, Movie.description,
-                                      Movie.rating, Movie.trailer,
-                                      Genre.name.label('genre'),
-                                      Genre.name.label('director')).join(Genre).join(Director).all()
-        # return jsonify(movies_schema.dump(movies_all))
+        movie_query = db.session.query(Movie.id, Movie.title, Movie.description,
+                                       Movie.rating, Movie.trailer,
+                                       Genre.name.label('genre'),
+                                       Genre.name.label('director')).join(Genre).join(Director).all()
+
+        if 'director_id' in request.args:
+            dir_id = request.args.get('director_id')
+            movie_query = movie_query.filter(Movie.director_id == dir_id)
+
+        movies_all = movie_query.all()
+
         return movies_schema.dump(movies_all), 200
 
     def post(self):
@@ -36,11 +45,59 @@ class MovieView(Resource):
 @movie_ns.route("/<int:mid>")
 class MovieView(Resource):
 
-    def get(self, mid):
+    def get(self, mid: int):
+        movie = db.session.query(Movie.id, Movie.title, Movie.description,
+                                 Movie.rating, Movie.trailer,
+                                 Genre.name.label("genre"),
+                                 Director.name.label("director")).join(Genre).join(Director).filter(Movie.id == mid).first()
+        if not movie:
+            return f"Фильм с выбранным Вами id={mid} отсутствует в БД", 404
+        return movie_schema.dump(movie), 200
+
+    def patch(self, mid: int):
         movie = db.session.query(Movie).get(mid)
         if not movie:
             return f"Фильм с выбранным Вами id={mid} отсутствует в БД", 404
-        return movie_schema.dump(movie)
+        req_json = request.json
+
+        if "title" in req_json:
+            movie.title = req_json["title"]
+        elif "description" in req_json:
+            movie.description = req_json["description"]
+        elif "rating" in req_json:
+            movie.rating = req_json["rating"]
+        elif "year" in req_json:
+            movie.year = req_json["year"]
+        elif "trailer" in req_json:
+            movie.trailer = req_json["trailer"]
+        db.session.add(movie)
+        db.session.commit()
+        return f"Изменения в БД о фильме {movie.title} добавлены", 204
+
+    def put(self, mid: int):
+        movie = db.session.query(Movie).get(mid)
+        if not movie:
+            return f"Фильм с выбранным Вами id={mid} отсутствует в БД", 404
+        req_json = request.json()
+
+        movie.title = req_json["title"]
+        movie.description = req_json["description"]
+        movie.trailer = req_json["trailer"]
+        movie.year = req_json["year"]
+        movie.rating = req_json["rating"]
+        movie.genre_id = req_json["genre_id"]
+        movie.director_id = req_json["director_id"]
+        db.session.add(movie)
+        db.session.commit()
+        return f"Сведения о фильме с выбранным Вами id={mid} обновлены в БД", 204
+
+    def delete(self, mid: int):
+        movie = db.session.query(Movie).get(mid)
+        if not movie:
+            return f"Фильм с выбранным Вами id={mid} отсутствует в БД", 404
+        db.session.delete(movie)
+        db.session.commit()
+        return f"Сведения о фильме с выбранным Вами id={mid} удалены из БД", 204
 
 
 # genre_ns = api.namespaces('genres')
