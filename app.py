@@ -7,10 +7,10 @@ from models_db import *
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JSON_AS_ASCII'] = False
 app.config['RESTX_JSON'] = {"ensure_ascii": False, "indent": 3}
 
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 api = Api(app)
@@ -22,13 +22,17 @@ class MovieView(Resource):
 
     def get(self):
         movie_query = db.session.query(Movie.id, Movie.title, Movie.description,
-                                       Movie.rating, Movie.trailer,
+                                       Movie.rating, Movie.trailer, Movie.genre_id, Movie.director_id,
                                        Genre.name.label('genre'),
-                                       Genre.name.label('director')).join(Genre).join(Director).all()
+                                       Director.name.label('director')).join(Genre).join(Director)
 
-        if 'director_id' in request.args:
-            dir_id = request.args.get('director_id')
-            movie_query = movie_query.filter(Movie.director_id == dir_id)
+        director_id = request.args.get('director_id')
+        genre_id = request.args.get('genre_id')
+
+        if director_id:
+            movie_query = movie_query.filter(Movie.director_id == director_id)
+        if genre_id:
+            movie_query = movie_query.filter(Movie.genre_id == genre_id)
 
         movies_all = movie_query.all()
 
@@ -46,10 +50,8 @@ class MovieView(Resource):
 class MovieView(Resource):
 
     def get(self, mid: int):
-        movie = db.session.query(Movie.id, Movie.title, Movie.description,
-                                 Movie.rating, Movie.trailer,
-                                 Genre.name.label("genre"),
-                                 Director.name.label("director")).join(Genre).join(Director).filter(Movie.id == mid).first()
+        movie = db.session.query(Movie)
+
         if not movie:
             return f"Фильм с выбранным Вами id={mid} отсутствует в БД", 404
         return movie_schema.dump(movie), 200
@@ -98,10 +100,6 @@ class MovieView(Resource):
         db.session.delete(movie)
         db.session.commit()
         return f"Сведения о фильме с выбранным Вами id={mid} удалены из БД", 204
-
-
-# genre_ns = api.namespaces('genres')
-# director_ns = api.namespaces('directors')
 
 
 if __name__ == '__main__':
