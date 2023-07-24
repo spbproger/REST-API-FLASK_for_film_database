@@ -50,7 +50,7 @@ class MovieView(Resource):
 class MovieView(Resource):
 
     def get(self, mid: int):
-        movie = db.session.query(Movie)
+        movie = db.session.query(Movie).get(mid)
 
         if not movie:
             return f"Фильм с выбранным Вами id={mid} отсутствует в БД", 404
@@ -80,7 +80,7 @@ class MovieView(Resource):
         movie = db.session.query(Movie).get(mid)
         if not movie:
             return f"Фильм с выбранным Вами id={mid} отсутствует в БД", 404
-        req_json = request.json()
+        req_json = request.json
 
         movie.title = req_json["title"]
         movie.description = req_json["description"]
